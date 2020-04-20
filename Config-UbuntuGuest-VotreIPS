@@ -1,0 +1,54 @@
+Commandes à faire sur la machine Ubuntu-Guest-VotreIPS :
+
+Tout d'abord, vérifiez que le routage est bien actif via la commande : 
+cat /proc/sys/net/ipv4/ip_forward
+
+Si la réponse est "1" alors c'est bon, sinon effectuez la commande suivante :
+echo 1 > /proc/sys/net/ipv4/ip_forward
+
+Maintenant, pour permettre aux machines d'accéder à internet, il faut faire deux choses :
+- Mettre un NAT en sortie
+- Rediriger les requêtes DNS
+
+
+Pour mettre un Nat en sortie, il faudra installer et utiliser iptables :
+apt update
+apt install iptables
+
+puis mettre une règle de NAT sur l'interface eth2 : 
+iptables -t nat -A POSTROUTING -o eth2 -j MASQUERADE
+
+Pour tester si votre NAT est bon, il suffira d'aller sur la machine ubuntu-dockerguest-2 et de vérifier via la commande :
+ping 8.8.8.8
+Si le ping passe c'est que votre NAT est bon. Si cela ne fonctionne pas, vérifiez vos commandes ainsi que les adresses IP, il doit y avoir un problème quelque part. Toutes les adresses IP des machines ont été configurée via clic droit sur machine > edit config.
+
+Pour relayer en DNS, on va utiliser bind9 et dnsutils :
+apt install dnsutils bind9
+
+Ensuite dans la configuration des options de bind9 on va indiquer vers quel DNS la requête sera transférée :
+nano /etc/bind/named.conf.options 
+
+Décommentez et compléter : 
+	forwarders{
+		8.8.8.8;
+	}
+
+Ensuite redémarrez le service : 
+service bind9 restart
+
+Si le service ne redémarre pas correctement, il doit y avoir une erreur dans votre saisie, vous pouvez utiliser cette commande pour vous aider : 
+named-checkconf /etc/bind/named.conf.options
+
+Si le service démarre correctement, vous n'avez plus qu'à essayer sur ubuntu-dockerguest-2:
+ping google.com
+
+Voilà maintenant Ubuntu-guest-votreIPS est prêt pour assurer son filtrage. Vous n'aurez qu'à copier votre programme python via un docker copy comme sur n'importe quel autre container.
+
+
+
+
+
+
+
+
+
